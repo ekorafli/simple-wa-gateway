@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const QRCode = require('qrcode');
 const axios = require('axios');
 const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -47,15 +48,22 @@ async function connectToWhatsApp() {
 
             if (!shouldReconnect) {
                 console.log('⚠️ Authentication failure or manual logout detected. Clearing session...');
-                try {
-                    if (fs.existsSync('auth_session')) {
-                        fs.rmSync('auth_session', { recursive: true, force: true });
+                
+                // Use a self-invoking async function or timeout to handle the async cleanup
+                setTimeout(() => {
+                    try {
+                        if (fs.existsSync('auth_session')) {
+                            const files = fs.readdirSync('auth_session');
+                            for (const file of files) {
+                                fs.rmSync(path.join('auth_session', file), { recursive: true, force: true });
+                            }
+                        }
+                        console.log('✅ Session cleared. Restarting...');
+                    } catch (err) {
+                        console.error('⚠️ Session clear had some issues (EBUSY), but continuing:', err.message);
                     }
-                } catch (err) {
-                    console.error('Failed to clear session folder:', err);
-                }
-                // Restart to generate a new QR code
-                connectToWhatsApp();
+                    connectToWhatsApp();
+                }, 1000); // 1 second delay to release file locks
             } else {
                 connectToWhatsApp();
             }
