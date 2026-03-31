@@ -37,11 +37,26 @@ async function connectToWhatsApp() {
         }
 
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect.error && lastDisconnect.error.output && lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut);
-            console.log('connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect);
+            const statusCode = lastDisconnect.error?.output?.statusCode || lastDisconnect.error?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 405;
+            
+            console.log(`Connection closed: ${lastDisconnect.error}. Reconnecting: ${shouldReconnect}`);
+            
             connectionStatus = 'DISCONNECTED';
             qrCodeString = '';
-            if (shouldReconnect) {
+
+            if (!shouldReconnect) {
+                console.log('⚠️ Authentication failure or manual logout detected. Clearing session...');
+                try {
+                    if (fs.existsSync('auth_session')) {
+                        fs.rmSync('auth_session', { recursive: true, force: true });
+                    }
+                } catch (err) {
+                    console.error('Failed to clear session folder:', err);
+                }
+                // Restart to generate a new QR code
+                connectToWhatsApp();
+            } else {
                 connectToWhatsApp();
             }
         } else if (connection === 'open') {
