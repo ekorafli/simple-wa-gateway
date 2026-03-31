@@ -27,4 +27,7 @@ services:
       POSTGRES_PASSWORD: mypassword
       POSTGRES_DB: wa_gateway
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

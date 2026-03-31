@@ -6,7 +6,6 @@ node_modules/
 
 # WhatsApp Session & Database (IMPORTANT: Do not commit this)
 auth_session/
-postgres_data/
 
 # Generated QR Code
 qrcode.png

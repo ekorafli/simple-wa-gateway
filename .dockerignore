@@ -8,4 +8,3 @@ README.md
 .gitignore
 qrcode.png
 auth_session
-postgres_data
