@@ -23,7 +23,9 @@ let deviceNumber = '';
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_session');
-    const { version, isLatest } = await fetchLatestBaileysVersion();
+    
+    // Using a fixed, stable version to avoid protocol mismatches
+    const version = [2, 3000, 101];
 
     sock = makeWASocket({
         version,
@@ -41,16 +43,18 @@ async function connectToWhatsApp() {
             const statusCode = lastDisconnect.error?.output?.statusCode || lastDisconnect.error?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 405;
             
-            console.log(`Connection closed: ${lastDisconnect.error}. Reconnecting: ${shouldReconnect}`);
+            console.log('❌ Connection Closed');
+            console.log('Error:', lastDisconnect.error);
+            console.log('Status Code:', statusCode);
+            console.log('Should Reconnect:', shouldReconnect);
             
             connectionStatus = 'DISCONNECTED';
             qrCodeString = '';
 
-            if (!shouldReconnect) {
-                console.log('⚠️ Authentication failure or manual logout detected. Clearing session...');
-                
-                // Use a self-invoking async function or timeout to handle the async cleanup
-                setTimeout(() => {
+            // Add a 5-second delay before *any* restart to prevent infinite loops
+            setTimeout(() => {
+                if (!shouldReconnect) {
+                    console.log('⚠️ Authentication failure or manual logout detected. Clearing session...');
                     try {
                         if (fs.existsSync('auth_session')) {
                             const files = fs.readdirSync('auth_session');
@@ -62,11 +66,9 @@ async function connectToWhatsApp() {
                     } catch (err) {
                         console.error('⚠️ Session clear had some issues (EBUSY), but continuing:', err.message);
                     }
-                    connectToWhatsApp();
-                }, 1000); // 1 second delay to release file locks
-            } else {
+                }
                 connectToWhatsApp();
-            }
+            }, 5000); // 5 second backoff delay
         } else if (connection === 'open') {
             console.log('opened connection');
             connectionStatus = 'CONNECTED';
