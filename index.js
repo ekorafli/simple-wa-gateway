@@ -14,8 +14,13 @@ const API_GATEWAY_TOKEN = process.env.API_GATEWAY_TOKEN;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
-// Reject all non-POST requests with 405 Method Not Allowed
-app.use((req, res, next) => {
+// Health check endpoint
+app.get('/', (req, res) => {
+    res.json({ status: connectionStatus, uptime: process.uptime() });
+});
+
+// Reject non-POST requests on /api/* routes with 405 Method Not Allowed
+app.use('/api', (req, res, next) => {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
@@ -45,10 +50,18 @@ async function connectToWhatsApp() {
         }
 
         if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect.error && lastDisconnect.error.output && lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut);
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             console.log('connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect);
             connectionStatus = 'DISCONNECTED';
             qrCodeString = '';
+
+            // Clear stale session on auth failures (401/405) and reconnect fresh
+            if (statusCode === 401 || statusCode === 405) {
+                console.log('[SESSION] Auth rejected by WhatsApp. Clearing stale session...');
+                fs.rmSync('auth_session', { recursive: true, force: true });
+            }
+
             if (shouldReconnect) {
                 connectToWhatsApp();
             }
