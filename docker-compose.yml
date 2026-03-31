@@ -13,16 +13,18 @@ services:
       - PORT=3000
       - NODE_ENV=production
       - DB_HOST=db
-      - DB_USER=root
-      - DB_PASSWORD=rootpassword
+      - DB_USER=myuser
+      - DB_PASSWORD=mypassword
       - DB_NAME=wa_gateway
+      - DB_PORT=5432
 
   db:
-    image: mysql:8.0
+    image: postgres:15
     container_name: wa-gateway-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: wa_gateway
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: wa_gateway
     volumes:
-      - ./mysql_data:/var/lib/mysql
+      - ./postgres_data:/var/lib/postgresql/data

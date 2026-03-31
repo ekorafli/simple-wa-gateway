@@ -8,4 +8,4 @@ README.md
 .gitignore
 qrcode.png
 auth_session
-mysql_data
+postgres_data

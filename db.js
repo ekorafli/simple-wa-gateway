@@ -1,56 +1,80 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 const { initAuthCreds, BufferJSON, proto } = require('@whiskeysockets/baileys');
 
 let pool;
 
 function getPool() {
     if (!pool) {
-        pool = mysql.createPool({
+        pool = new Pool({
             host: process.env.DB_HOST,
             user: process.env.DB_USER,
             password: process.env.DB_PASSWORD,
             database: process.env.DB_NAME,
-            waitForConnections: true,
-            connectionLimit: 10,
-            queueLimit: 0
+            port: process.env.DB_PORT || 5432,
+            max: 20,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 2000,
         });
     }
     return pool;
 }
 
-async function useMysqlAuthState() {
+async function usePostgresAuthState() {
     const currentPool = getPool();
 
+    // Retry logic to wait for DB to be ready
+    let connected = false;
+    for (let i = 0; i < 10; i++) {
+        try {
+            await currentPool.query('SELECT 1');
+            connected = true;
+            break;
+        } catch (err) {
+            console.log(`[DB] Waiting for database connection... (Attempt ${i + 1}/10)`);
+            await new Promise(res => setTimeout(res, 2000));
+        }
+    }
+
+    if (!connected) {
+        throw new Error('[DB] Failed to connect to PostgreSQL after 10 attempts');
+    }
+
     // Create table if it doesn't exist
-    await currentPool.execute(`
+    await currentPool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
             id VARCHAR(255) PRIMARY KEY,
-            data LONGTEXT
+            data TEXT
         )
     `);
 
     const writeData = async (data, id) => {
         const json = JSON.stringify(data, BufferJSON.replacer);
-        await currentPool.execute('REPLACE INTO sessions (id, data) VALUES (?, ?)', [id, json]);
+        await currentPool.query(
+            'INSERT INTO sessions (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = $2',
+            [id, json]
+        );
     };
 
     const readData = async (id) => {
         try {
-            const [rows] = await currentPool.execute('SELECT data FROM sessions WHERE id = ?', [id]);
-            if (rows.length > 0) {
-                return JSON.parse(rows[0].data, BufferJSON.reviver);
+            const res = await currentPool.query('SELECT data FROM sessions WHERE id = $1', [id]);
+            if (res.rows.length > 0) {
+                return JSON.parse(res.rows[0].data, BufferJSON.reviver);
             }
         } catch (error) {
-            console.error(`Error reading session data for ${id}:`, error);
+            // Silence common read errors during initial connection
+            if (process.env.NODE_ENV !== 'production') {
+                console.error(`[DB] Error reading session data for ${id}:`, error.message);
+            }
         }
         return null;
     };
 
     const removeData = async (id) => {
         try {
-            await currentPool.execute('DELETE FROM sessions WHERE id = ?', [id]);
+            await currentPool.query('DELETE FROM sessions WHERE id = $1', [id]);
         } catch (error) {
-            console.error(`Error deleting session data for ${id}:`, error);
+            console.error(`[DB] Error deleting session data for ${id}:`, error);
         }
     };
 
@@ -65,10 +89,12 @@ async function useMysqlAuthState() {
                     await Promise.all(
                         ids.map(async (id) => {
                             let value = await readData(`${type}-${id}`);
-                            if (type === 'app-state-sync-key' && value) {
-                                value = proto.Message.AppStateSyncKeyData.fromObject(value);
+                            if (value) {
+                                if (type === 'app-state-sync-key') {
+                                    value = proto.Message.AppStateSyncKeyData.fromObject(value);
+                                }
+                                data[id] = value;
                             }
-                            data[id] = value;
                         })
                     );
                     return data;
@@ -87,8 +113,8 @@ async function useMysqlAuthState() {
             }
         },
         saveCreds: () => writeData(creds, 'creds'),
-        clearSession: () => currentPool.execute('DELETE FROM sessions')
+        clearSession: () => currentPool.query('DELETE FROM sessions')
     };
 }
 
-module.exports = { useMysqlAuthState };
+module.exports = { usePostgresAuthState };

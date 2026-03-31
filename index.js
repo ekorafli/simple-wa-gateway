@@ -1,5 +1,5 @@
 const { default: makeWASocket, DisconnectReason, delay, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const { useMysqlAuthState } = require('./db');
+const { usePostgresAuthState } = require('./db');
 const pino = require('pino');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -34,7 +34,7 @@ let deviceName = '';
 let deviceNumber = '';
 
 async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMysqlAuthState();
+    const { state, saveCreds } = await usePostgresAuthState();
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
@@ -59,8 +59,8 @@ async function connectToWhatsApp() {
             // Clear stale session on auth failures (401/405) and reconnect fresh
             if (statusCode === 401 || statusCode === 405) {
                 console.log('[SESSION] Auth rejected by WhatsApp. Clearing stale session...');
-                const { clearSession } = require('./db');
-                useMysqlAuthState().then(auth => auth.clearSession());
+                const { usePostgresAuthState } = require('./db');
+                usePostgresAuthState().then(auth => auth.clearSession());
             }
 
             if (shouldReconnect) {
