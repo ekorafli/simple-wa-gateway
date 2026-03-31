@@ -1,4 +1,5 @@
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { useMysqlAuthState } = require('./db');
 const pino = require('pino');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -34,7 +35,13 @@ let deviceName = '';
 let deviceNumber = '';
 
 async function connectToWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_session');
+    let auth;
+    if (process.env.DB_HOST) {
+        auth = await useMysqlAuthState();
+    } else {
+        auth = await useMultiFileAuthState('auth_session');
+    }
+    const { state, saveCreds } = auth;
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
@@ -59,7 +66,13 @@ async function connectToWhatsApp() {
             // Clear stale session on auth failures (401/405) and reconnect fresh
             if (statusCode === 401 || statusCode === 405) {
                 console.log('[SESSION] Auth rejected by WhatsApp. Clearing stale session...');
-                fs.rmSync('auth_session', { recursive: true, force: true });
+                if (process.env.DB_HOST) {
+                    // mysql clear
+                    const { clearSession } = require('./db');
+                    useMysqlAuthState().then(auth => auth.clearSession());
+                } else {
+                    fs.rmSync('auth_session', { recursive: true, force: true });
+                }
             }
 
             if (shouldReconnect) {
@@ -80,12 +93,12 @@ async function connectToWhatsApp() {
 // Middleware for token validation
 const validateToken = (req, res, next) => {
     const { token } = req.body;
-    
+
     if (!token) {
         console.log(`[AUTH] Unauthorized: No token provided in request body.`);
         return res.status(401).json({ error: 'Unauthorized: Missing token' });
     }
-    
+
     if (token !== process.env.API_GATEWAY_TOKEN) {
         const maskedReceived = token.substring(0, 4) + '...' + token.substring(token.length - 4);
         const expected = process.env.API_GATEWAY_TOKEN || '';
@@ -93,7 +106,7 @@ const validateToken = (req, res, next) => {
         console.log(`[AUTH] Unauthorized: Invalid token. Received: ${maskedReceived}, Expected: ${maskedExpected}`);
         return res.status(401).json({ error: 'Unauthorized: Invalid token' });
     }
-    
+
     next();
 };
 

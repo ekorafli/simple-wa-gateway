@@ -5,10 +5,24 @@ services:
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
-    volumes:
-      - ./auth_session:/app/auth_session
+    depends_on:
+      - db
     env_file:
       - .env
     environment:
       - PORT=3000
       - NODE_ENV=production
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=rootpassword
+      - DB_NAME=wa_gateway
+
+  db:
+    image: mysql:8.0
+    container_name: wa-gateway-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: wa_gateway
+    volumes:
+      - ./mysql_data:/var/lib/mysql
