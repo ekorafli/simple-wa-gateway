@@ -14,6 +14,14 @@ const API_GATEWAY_TOKEN = process.env.API_GATEWAY_TOKEN;
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+// Reject all non-POST requests with 405 Method Not Allowed
+app.use((req, res, next) => {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed' });
+    }
+    next();
+});
+
 let sock;
 let qrCodeString = '';
 let connectionStatus = 'DISCONNECTED';
@@ -25,6 +33,7 @@ async function connectToWhatsApp() {
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
+        version,
         auth: state,
         logger: pino({ level: 'silent' }),
     });
