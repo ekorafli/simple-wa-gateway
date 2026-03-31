@@ -5,7 +5,6 @@ const bodyParser = require('body-parser');
 const QRCode = require('qrcode');
 const axios = require('axios');
 const fs = require('fs');
-const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -23,9 +22,7 @@ let deviceNumber = '';
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_session');
-    
-    // Using a fixed, stable version to avoid protocol mismatches
-    const version = [2, 3000, 101];
+    const { version, isLatest } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
         version,
@@ -40,35 +37,13 @@ async function connectToWhatsApp() {
         }
 
         if (connection === 'close') {
-            const statusCode = lastDisconnect.error?.output?.statusCode || lastDisconnect.error?.statusCode;
-            const shouldReconnect = statusCode !== DisconnectReason.loggedOut && statusCode !== 401 && statusCode !== 405;
-            
-            console.log('❌ Connection Closed');
-            console.log('Error:', lastDisconnect.error);
-            console.log('Status Code:', statusCode);
-            console.log('Should Reconnect:', shouldReconnect);
-            
+            const shouldReconnect = (lastDisconnect.error && lastDisconnect.error.output && lastDisconnect.error.output.statusCode !== DisconnectReason.loggedOut);
+            console.log('connection closed due to ', lastDisconnect.error, ', reconnecting ', shouldReconnect);
             connectionStatus = 'DISCONNECTED';
             qrCodeString = '';
-
-            // Add a 5-second delay before *any* restart to prevent infinite loops
-            setTimeout(() => {
-                if (!shouldReconnect) {
-                    console.log('⚠️ Authentication failure or manual logout detected. Clearing session...');
-                    try {
-                        if (fs.existsSync('auth_session')) {
-                            const files = fs.readdirSync('auth_session');
-                            for (const file of files) {
-                                fs.rmSync(path.join('auth_session', file), { recursive: true, force: true });
-                            }
-                        }
-                        console.log('✅ Session cleared. Restarting...');
-                    } catch (err) {
-                        console.error('⚠️ Session clear had some issues (EBUSY), but continuing:', err.message);
-                    }
-                }
+            if (shouldReconnect) {
                 connectToWhatsApp();
-            }, 5000); // 5 second backoff delay
+            }
         } else if (connection === 'open') {
             console.log('opened connection');
             connectionStatus = 'CONNECTED';
