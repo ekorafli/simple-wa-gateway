@@ -142,6 +142,3 @@ curl -d "token=YOUR_TOKEN" -X POST http://localhost:3000/api/qrcode_image --outp
 
 ### ⚖️ Disclaimer
 This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with WhatsApp or any of its subsidiaries or its affiliates. The official WhatsApp website can be found at https://www.whatsapp.com. Use this project at your own risk.
-
----
-© 2026 WhatsApp API Gateway - Built for Speed & Reliability.
