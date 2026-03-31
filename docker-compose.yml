@@ -1,0 +1,14 @@
+services:
+  wa-gateway:
+    build: .
+    container_name: wa-gateway-service
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./auth_session:/app/auth_session
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
