@@ -4,8 +4,9 @@ node_modules/
 # Environment variables
 .env
 
-# WhatsApp Session (IMPORTANT: Do not commit this)
+# WhatsApp Session & Database (IMPORTANT: Do not commit this)
 auth_session/
+mysql_data/
 
 # Generated QR Code
 qrcode.png

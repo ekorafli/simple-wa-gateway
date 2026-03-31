@@ -1,11 +1,10 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, delay, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, DisconnectReason, delay, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const { useMysqlAuthState } = require('./db');
 const pino = require('pino');
 const express = require('express');
 const bodyParser = require('body-parser');
 const QRCode = require('qrcode');
 const axios = require('axios');
-const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
@@ -35,13 +34,7 @@ let deviceName = '';
 let deviceNumber = '';
 
 async function connectToWhatsApp() {
-    let auth;
-    if (process.env.DB_HOST) {
-        auth = await useMysqlAuthState();
-    } else {
-        auth = await useMultiFileAuthState('auth_session');
-    }
-    const { state, saveCreds } = auth;
+    const { state, saveCreds } = await useMysqlAuthState();
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
@@ -66,13 +59,8 @@ async function connectToWhatsApp() {
             // Clear stale session on auth failures (401/405) and reconnect fresh
             if (statusCode === 401 || statusCode === 405) {
                 console.log('[SESSION] Auth rejected by WhatsApp. Clearing stale session...');
-                if (process.env.DB_HOST) {
-                    // mysql clear
-                    const { clearSession } = require('./db');
-                    useMysqlAuthState().then(auth => auth.clearSession());
-                } else {
-                    fs.rmSync('auth_session', { recursive: true, force: true });
-                }
+                const { clearSession } = require('./db');
+                useMysqlAuthState().then(auth => auth.clearSession());
             }
 
             if (shouldReconnect) {

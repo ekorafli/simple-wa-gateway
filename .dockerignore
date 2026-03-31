@@ -7,3 +7,5 @@ README.md
 .git
 .gitignore
 qrcode.png
+auth_session
+mysql_data
