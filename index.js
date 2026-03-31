@@ -38,7 +38,7 @@ async function connectToWhatsApp() {
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
-        version,
+        version: [2, 3000, 1015901307],
         auth: state,
         logger: pino({ level: 'silent' }),
     });
