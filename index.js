@@ -44,7 +44,7 @@ async function connectToWhatsApp() {
         logger: pino({ level: 'silent' }),
     });
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
         if (qr) {
             qrCodeString = qr;
@@ -60,11 +60,23 @@ async function connectToWhatsApp() {
             // Clear stale session on auth failures (401/405) and reconnect fresh
             if (statusCode === 401 || statusCode === 405) {
                 console.log('[SESSION] Auth rejected by WhatsApp. Clearing stale session...');
-                const { usePostgresAuthState } = require('./db');
-                usePostgresAuthState().then(auth => auth.clearSession());
-            }
-
-            if (shouldReconnect) {
+                try {
+                    const { usePostgresAuthState } = require('./db');
+                    const auth = await usePostgresAuthState();
+                    await auth.clearSession();
+                    console.log('[SESSION] Session cleared successfully. Will reconnect for fresh QR...');
+                } catch (err) {
+                    console.error('[SESSION] Failed to clear session:', err.message);
+                }
+                // Wait before reconnecting to avoid rate-limiting and ensure DB is flushed
+                console.log('[SESSION] Waiting 10s before reconnecting for fresh QR...');
+                await delay(10000);
+                connectToWhatsApp();
+            } else if (shouldReconnect) {
+                // Add a short delay before reconnecting to avoid hammering WhatsApp
+                const reconnectDelay = statusCode === DisconnectReason.restartRequired ? 1000 : 5000;
+                console.log(`[RECONNECT] Reconnecting in ${reconnectDelay / 1000}s...`);
+                await delay(reconnectDelay);
                 connectToWhatsApp();
             }
         } else if (connection === 'open') {
