@@ -139,13 +139,15 @@ app.post('/api/qrcode_image', validateToken, async (req, res) => {
 
 app.post('/api/device', validateToken, (req, res) => {
     if (connectionStatus !== 'CONNECTED') {
-        return res.status(400).json({ error: 'Device not connected' });
+        const errorMsg = JSON.stringify({ result: 'false', message: 'Device not connected' }, null, 2);
+        return res.status(400).type('text/html').send(errorMsg);
     }
-    res.json({
+    const response = JSON.stringify({
         result: 'true',
         phoneNumber: deviceNumber,
         name: deviceName
-    });
+    }, null, 2);
+    res.type('text/html').send(response);
 });
 
 app.post('/api/send_message', validateToken, async (req, res) => {

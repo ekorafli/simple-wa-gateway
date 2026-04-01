@@ -106,10 +106,12 @@ curl -d "token=YOUR_TOKEN" -X POST http://localhost:3000/api/qrcode_image
 **`POST /api/device`**
 
 **Response**:
-```json
+Returns device info as a formatted string with `text/html` content type:
+```html
 {
-  "phoneNumber": "628123456789",
-  "name": "Primary Device"
+  "result": "true",
+  "phoneNumber": "6283808408395",
+  "name": "Nur Cholifah | NC"
 }
 ```
 
