@@ -1,4 +1,4 @@
-const { default: makeWASocket, DisconnectReason, delay, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, DisconnectReason, delay, fetchLatestWaWebVersion } = require('@whiskeysockets/baileys');
 const { usePostgresAuthState } = require('./db');
 const pino = require('pino');
 const express = require('express');
@@ -35,12 +35,22 @@ let deviceNumber = '';
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await usePostgresAuthState();
-    const { version, isLatest } = await fetchLatestBaileysVersion();
+
+    let version;
+    try {
+        const result = await fetchLatestWaWebVersion();
+        version = result.version;
+        console.log(`[WA] Using WhatsApp Web version: ${version.join('.')}`);
+    } catch (err) {
+        // Fallback to a known working version if fetch fails
+        version = [2, 3000, 1036404385];
+        console.log(`[WA] Failed to fetch latest version, using fallback: ${version.join('.')}`);
+    }
 
     sock = makeWASocket({
         version,
         auth: state,
-        browser: ['Ubuntu', 'Chrome', '20.0.04'], // Mimics an Ubuntu browser, widely known fix for VPS connection loops`
+        browser: ['Ubuntu', 'Chrome', '20.0.04'],
         logger: pino({ level: 'silent' }),
     });
 
