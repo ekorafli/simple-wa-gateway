@@ -124,6 +124,14 @@ Returns device info as a formatted string with `text/html` content type:
 | `number` | `string` | Recipient (e.g., `62812...`) |
 | `message` | `string` | Content to send |
 
+**Response**:
+```html
+{
+  "result": "true",
+  "message": "Message sent successfully"
+}
+```
+
 ### 4. Send Image
 **`POST /api/send_image`**
 
@@ -132,6 +140,14 @@ Returns device info as a formatted string with `text/html` content type:
 | `token` | `string` | Security token |
 | `file` | `string` | Public image URL |
 | `caption` | `string` | (Optional) Image caption |
+
+**Response**:
+```html
+{
+  "result": "true",
+  "message": "Image sent successfully"
+}
+```
 
 ---
 

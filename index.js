@@ -153,21 +153,25 @@ app.post('/api/device', validateToken, (req, res) => {
 app.post('/api/send_message', validateToken, async (req, res) => {
     const { number, message } = req.body;
     if (!number || !message) {
-        return res.status(400).json({ error: 'Number and message are required' });
+        const errorMsg = JSON.stringify({ result: 'false', message: 'Number and message are required' }, null, 2);
+        return res.status(400).type('text/html').send(errorMsg);
     }
     try {
         const jid = number.includes('@s.whatsapp.net') ? number : `${number}@s.whatsapp.net`;
         await sock.sendMessage(jid, { text: message });
-        res.json({ success: true });
+        const response = JSON.stringify({ result: 'true', message: 'Message sent successfully' }, null, 2);
+        res.type('text/html').send(response);
     } catch (err) {
-        res.status(500).json({ error: 'Failed to send message', details: err.message });
+        const errorMsg = JSON.stringify({ result: 'false', message: 'Failed to send message', details: err.message }, null, 2);
+        res.status(500).type('text/html').send(errorMsg);
     }
 });
 
 app.post('/api/send_image', validateToken, async (req, res) => {
     const { number, file } = req.body;
     if (!number || !file) {
-        return res.status(400).json({ error: 'Number and file URL are required' });
+        const errorMsg = JSON.stringify({ result: 'false', message: 'Number and file URL are required' }, null, 2);
+        return res.status(400).type('text/html').send(errorMsg);
     }
     try {
         const jid = number.includes('@s.whatsapp.net') ? number : `${number}@s.whatsapp.net`;
@@ -175,9 +179,11 @@ app.post('/api/send_image', validateToken, async (req, res) => {
             image: { url: file },
             caption: req.body.caption || ''
         });
-        res.json({ success: true });
+        const response = JSON.stringify({ result: 'true', message: 'Image sent successfully' }, null, 2);
+        res.type('text/html').send(response);
     } catch (err) {
-        res.status(500).json({ error: 'Failed to send image', details: err.message });
+        const errorMsg = JSON.stringify({ result: 'false', message: 'Failed to send image', details: err.message }, null, 2);
+        res.status(500).type('text/html').send(errorMsg);
     }
 });
 
