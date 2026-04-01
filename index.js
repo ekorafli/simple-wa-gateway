@@ -142,7 +142,7 @@ app.post('/api/device', validateToken, (req, res) => {
         return res.status(400).json({ error: 'Device not connected' });
     }
     res.json({
-        result: true,
+        result: 'true',
         phoneNumber: deviceNumber,
         name: deviceName
     });
