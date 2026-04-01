@@ -124,14 +124,14 @@ const validateToken = (req, res, next) => {
 // Endpoints
 app.post('/api/qrcode_image', validateToken, async (req, res) => {
     if (connectionStatus === 'CONNECTED') {
-        return res.status(200).json({ message: 'Device is already connected' });
+        return res.status(200).send('Device is already connected');
     }
     if (!qrCodeString) {
         return res.status(503).json({ error: 'QR Code not available yet, please wait or refresh' });
     }
     try {
-        const qrBase64 = await QRCode.toDataURL(qrCodeString);
-        res.json({ qrcode: qrBase64 });
+        const qrDataURL = await QRCode.toDataURL(qrCodeString);
+        res.type('text/html').send(`<img src="${qrDataURL}" alt="QR Code" />`);
     } catch (err) {
         res.status(500).json({ error: 'Failed to generate QR Code image' });
     }

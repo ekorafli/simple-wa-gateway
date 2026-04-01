@@ -91,9 +91,15 @@ docker compose up -d
 | :--- | :--- | :--- |
 | `token` | `string` | Your security token |
 
+**Response**:
+Returns an HTML `<img>` tag with the QR code as a base64 encoded string:
+```html
+<img src="data:image/png;base64,..." alt="QR Code" />
+```
+
 **Example**:
 ```bash
-curl -d "token=YOUR_TOKEN" -X POST http://localhost:3000/api/qrcode_image --output qrcode.png
+curl -d "token=YOUR_TOKEN" -X POST http://localhost:3000/api/qrcode_image
 ```
 
 ### 2. Get Device Details
