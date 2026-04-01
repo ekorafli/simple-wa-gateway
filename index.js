@@ -38,8 +38,9 @@ async function connectToWhatsApp() {
     const { version, isLatest } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
-        version: [2, 3000, 1015901307],
+        version,
         auth: state,
+        browser: ['Ubuntu', 'Chrome', '20.0.04'], // Mimics an Ubuntu browser, widely known fix for VPS connection loops`
         logger: pino({ level: 'silent' }),
     });
 
